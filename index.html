@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>MineClone 3D Corrigido</title>
+    <title>MineClone - Versão Compatível</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #87CEEB; }
         #crosshair {
@@ -15,31 +15,48 @@
 </head>
 <body>
     <div id="crosshair"></div>
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
     <script type="importmap">
         {
-            "imports": { "three": "https://unpkg.com/three@0.158.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/" }
+            "imports": {
+                "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.150.0/examples/jsm/"
+            }
         }
     </script>
+
     <script type="module">
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
+        // Tentar criar o renderizador com configurações de compatibilidade
+        let renderer;
+        try {
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: false, // Desativado para economizar recursos
+                precision: "mediump" // Menor precisão para placas antigas
+            });
+        } catch (e) {
+            alert("Seu navegador ou placa de vídeo não suporta WebGL.");
+        }
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
+        // Usar luz simples
         const light = new THREE.AmbientLight(0xffffff, 1);
         scene.add(light);
 
-        // Gera o chão 3D
+        // Chão simples (Menos blocos para não travar o PC antigo)
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        for (let x = -10; x < 10; x++) {
-            for (let z = -10; z < 10; z++) {
-                const material = new THREE.MeshStandardMaterial({ color: 0x48a044 });
+        for (let x = -5; x < 5; x++) {
+            for (let z = -5; z < 5; z++) {
+                // MeshBasicMaterial é o mais leve que existe
+                const material = new THREE.MeshBasicMaterial({ color: 0x48a044 });
                 const cube = new THREE.Mesh(geometry, material);
                 cube.position.set(x, 0, z);
                 scene.add(cube);
