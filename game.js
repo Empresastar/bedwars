@@ -1,154 +1,127 @@
-// --- CONFIGURAÇÃO DA CENA ---
+import * as THREE from 'three';
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb); // Cor do céu
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+scene.background = new THREE.Color(0x6eb1ff);
+const camera = new THREE.PerspectiveCamera(85, window.innerWidth/window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(10, 20, 10);
-scene.add(light, new THREE.AmbientLight(0x404040));
+scene.add(light, new THREE.AmbientLight(0x707070));
 
-// --- VARIÁVEIS DE JOGO ---
 let blocks = [];
-let drops = [];
-let inventory = { iron: 0, gold: 0, blocks: 64 };
+let inventory = { blocks: 999 }; 
 let velocityY = 0;
 const gravity = -0.008;
-const jumpForce = 0.12;
-const playerHeight = 1.8;
+const jumpForce = 0.11;
 
-// --- CRIAÇÃO DE BLOCOS ---
-function createCube(x, y, z, color, type = 'block') {
-    const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshLambertMaterial({ color })
-    );
-    mesh.position.set(x, y, z);
-    mesh.userData.type = type;
+function createCube(x, y, z, color = 0xdddddd) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color }));
+    mesh.position.set(Math.round(x), Math.round(y), Math.round(z));
     scene.add(mesh);
     blocks.push(mesh);
     return mesh;
 }
 
-// Chão (Ilha Inicial)
-for(let x=-5; x<=5; x++) {
-    for(let z=-5; z<=5; z++) {
-        createCube(x, 0, z, 0x55aa55);
-    }
-}
+// Chão inicial
+for(let x=-2; x<=2; x++) { for(let z=-2; z<=2; z++) { createCube(x, 0, z, 0x55aa55); } }
 
-// Elementos do Mapa
-createCube(0, 1, -2, 0xff0000, 'bed'); // Cama
-const npc = createCube(3, 1, 0, 0x0000ff, 'npc'); // Loja
-const genPos = new THREE.Vector3(-3, 1, 0); // Local do Gerador
-createCube(genPos.x, 0.5, genPos.z, 0x333333);
-
-// --- GERADOR DE ITENS ---
-function spawnItem() {
-    const isGold = Math.random() > 0.8;
-    const item = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15),
-        new THREE.MeshBasicMaterial({ color: isGold ? 0xffd700 : 0xdddddd })
-    );
-    item.position.copy(genPos).add(new THREE.Vector3(0, 1, 0));
-    item.userData = { type: isGold ? 'gold' : 'iron' };
-    scene.add(item);
-    drops.push(item);
-}
-setInterval(spawnItem, 2000);
-
-// --- CONTROLES E MOVIMENTO ---
 let keys = {};
 document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-let yaw = 0, pitch = 0;
-document.body.addEventListener('click', () => document.body.requestPointerLock());
-document.addEventListener('mousemove', (e) => {
-    if (document.pointerLockElement !== document.body) return;
-    yaw -= e.movementX * 0.002;
-    pitch -= e.movementY * 0.002;
-    pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
-    camera.rotation.set(pitch, yaw, 0, 'YXZ');
-});
+function animate() {
+    requestAnimationFrame(animate);
+    let isSneaking = keys['shift'];
+    let speed = isSneaking ? 0.05 : 0.13;
+    let targetHeight = isSneaking ? 1.35 : 1.7;
 
-camera.position.set(0, 3, 5);
-
-// --- LOOP DE ATUALIZAÇÃO ---
-function update() {
-    // Movimento WASD
-    const speed = 0.1;
     const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
     dir.y = 0; dir.normalize();
     const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
 
-    if(keys['w']) camera.position.add(dir.clone().multiplyScalar(speed));
-    if(keys['s']) camera.position.add(dir.clone().multiplyScalar(-speed));
-    if(keys['a']) camera.position.add(side.clone().multiplyScalar(-speed));
-    if(keys['d']) camera.position.add(side.clone().multiplyScalar(speed));
+    // Movimentação simples
+    if(keys['w']) { camera.position.x += dir.x * speed; camera.position.z += dir.z * speed; }
+    if(keys['s']) { camera.position.x -= dir.x * speed; camera.position.z -= dir.z * speed; }
+    if(keys['a']) { camera.position.x -= side.x * speed; camera.position.z -= side.z * speed; }
+    if(keys['d']) { camera.position.x += side.x * speed; camera.position.z += side.z * speed; }
 
-    // Gravidade e Pulo
     velocityY += gravity;
     camera.position.y += velocityY;
-    if(camera.position.y < playerHeight) {
-        camera.position.y = playerHeight;
-        velocityY = 0;
-        if(keys[' ']) velocityY = jumpForce;
-    }
 
-    // Coleta de Itens no chão
-    drops.forEach((item, index) => {
-        if(camera.position.distanceTo(item.position) < 1.2) {
-            inventory[item.userData.type]++;
-            document.getElementById(item.userData.type + '-count').innerText = inventory[item.userData.type];
-            scene.remove(item);
-            drops.splice(index, 1);
+    let onGround = false;
+    blocks.forEach(b => {
+        if(Math.abs(camera.position.x - b.position.x) < 0.6 && Math.abs(camera.position.z - b.position.z) < 0.6) {
+            const blockTop = b.position.y + 0.5;
+            if (camera.position.y - targetHeight <= blockTop && camera.position.y - blockTop >= 0) {
+                camera.position.y = blockTop + targetHeight;
+                velocityY = 0;
+                onGround = true;
+            }
         }
     });
 
-    // Detectar NPC
-    const distToNPC = camera.position.distanceTo(npc.position);
-    document.getElementById('shop-msg').style.display = distToNPC < 3 ? 'block' : 'none';
+    if(onGround && keys[' ']) velocityY = jumpForce;
+    if(camera.position.y < -10) { camera.position.set(0, 5, 0); velocityY = 0; }
+    renderer.render(scene, camera);
 }
 
-// --- INTERAÇÃO (CLIQUES) ---
-const raycaster = new THREE.Raycaster();
+// --- SISTEMA DE PONTE ESTILO BEDROCK ---
 window.addEventListener('mousedown', (e) => {
     if (document.pointerLockElement !== document.body) return;
-    raycaster.setFromCamera({x:0, y:0}, camera);
-    const intersects = raycaster.intersectObjects(blocks);
+    
+    if (e.button === 0 && inventory.blocks > 0) {
+        const ray = new THREE.Raycaster();
+        ray.setFromCamera({x:0, y:0}, camera);
+        const intersects = ray.intersectObjects(blocks);
 
-    if(intersects.length > 0) {
-        const hit = intersects[0];
-        // Clique Esquerdo: Colocar Bloco
-        if(e.button === 0 && inventory.blocks > 0) {
-            const pos = hit.object.position.clone().add(hit.face.normal);
-            createCube(pos.x, pos.y, pos.z, 0xaaaaaa);
-            inventory.blocks--;
-            document.getElementById('block-count').innerText = inventory.blocks;
-        }
-        // Clique Direito: Quebrar
-        if(e.button === 2 && hit.object.position.y > 0) {
-            scene.remove(hit.object);
-            blocks = blocks.filter(b => b !== hit.object);
+        if (intersects.length > 0) {
+            // Lógica padrão: Se clicar num bloco, coloca na face
+            const hit = intersects[0];
+            const newPos = hit.object.position.clone().add(hit.face.normal);
+            if(!blocks.some(b => b.position.equals(newPos))) {
+                createCube(newPos.x, newPos.y, newPos.z);
+                inventory.blocks--;
+            }
+        } else {
+            // LÓGICA BEDROCK: Se clicar no "nada" olhando para baixo/frente
+            const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+            
+            // Encontrar o bloco que está sob o jogador ou logo atrás
+            const playerFloorPos = new THREE.Vector3(
+                Math.round(camera.position.x),
+                Math.round(camera.position.y - 1.7), // Nível do chão
+                Math.round(camera.position.z)
+            );
+
+            // Calcula onde o bloco deve aparecer (na direção que você olha)
+            const buildPos = playerFloorPos.clone().add(new THREE.Vector3(
+                Math.round(dir.x),
+                0,
+                Math.round(dir.z)
+            ));
+
+            // Só coloca se estiver perto e não houver bloco
+            const dist = buildPos.distanceTo(camera.position);
+            if(dist < 4 && !blocks.some(b => b.position.equals(buildPos))) {
+                createCube(buildPos.x, buildPos.y, buildPos.z);
+                inventory.blocks--;
+            }
         }
     }
 });
 
-window.addEventListener('contextmenu', e => e.preventDefault());
-
-function animate() {
-    requestAnimationFrame(animate);
-    update();
-    renderer.render(scene, camera);
-}
-animate();
-
-// Ajustar tela ao redimensionar
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement !== document.body) return;
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y -= e.movementX * 0.002;
+    camera.rotation.x -= e.movementY * 0.002;
+    camera.rotation.x = Math.max(-1.5, Math.min(1.5, camera.rotation.x));
 });
+
+document.body.addEventListener('click', () => document.body.requestPointerLock());
+window.oncontextmenu = (e) => e.preventDefault();
+camera.position.set(0, 5, 0);
+animate();
