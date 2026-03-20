@@ -2,76 +2,74 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>MineClone - Versão Compatível</title>
+    <title>MineClone Retro - Bedwars</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #87CEEB; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
         #crosshair {
             position: absolute; top: 50%; left: 50%;
-            width: 10px; height: 10px; background: white;
+            width: 8px; height: 8px; background: white;
             border-radius: 50%; transform: translate(-50%, -50%);
             z-index: 10; pointer-events: none; border: 1px solid black;
         }
+        #error-msg { color: white; position: absolute; top: 10px; left: 10px; font-family: sans-serif; display: none; }
     </style>
 </head>
 <body>
+    <div id="error-msg">Erro ao carregar 3D. Tente outro navegador.</div>
     <div id="crosshair"></div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.150.0/examples/jsm/"
-            }
-        }
-    </script>
-
     <script type="module">
-        import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
+        import { PointerLockControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/PointerLockControls.js';
 
-        // Tentar criar o renderizador com configurações de compatibilidade
-        let renderer;
-        try {
-            renderer = new THREE.WebGLRenderer({ 
-                antialias: false, // Desativado para economizar recursos
-                precision: "mediump" // Menor precisão para placas antigas
-            });
-        } catch (e) {
-            alert("Seu navegador ou placa de vídeo não suporta WebGL.");
-        }
+        let scene, camera, renderer, controls;
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        function init() {
+            try {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x87CEEB);
 
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+                camera.position.set(0, 2, 5);
 
-        // Usar luz simples
-        const light = new THREE.AmbientLight(0xffffff, 1);
-        scene.add(light);
+                // CONFIGURAÇÃO CRÍTICA PARA INTEL ANTIGA
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: false,
+                    precision: "lowp", // Menor precisão para não travar
+                    powerPreference: "high-performance"
+                });
+                
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(renderer.domElement);
 
-        // Chão simples (Menos blocos para não travar o PC antigo)
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        for (let x = -5; x < 5; x++) {
-            for (let z = -5; z < 5; z++) {
-                // MeshBasicMaterial é o mais leve que existe
+                // Chão de teste (Apenas 8x8 blocos para ser ultra leve)
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
                 const material = new THREE.MeshBasicMaterial({ color: 0x48a044 });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.position.set(x, 0, z);
-                scene.add(cube);
+
+                for (let x = -4; x < 4; x++) {
+                    for (let z = -4; z < 4; z++) {
+                        const cube = new THREE.Mesh(geometry, material);
+                        cube.position.set(x, 0, z);
+                        scene.add(cube);
+                    }
+                }
+
+                controls = new PointerLockControls(camera, document.body);
+                document.addEventListener('click', () => controls.lock());
+
+                animate();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('error-msg').style.display = 'block';
             }
         }
-
-        const controls = new PointerLockControls(camera, document.body);
-        document.addEventListener('click', () => controls.lock());
-        camera.position.set(0, 2, 5);
 
         function animate() {
             requestAnimationFrame(animate);
-            renderer.render(scene, camera);
+            if(renderer) renderer.render(scene, camera);
         }
-        animate();
+
+        window.onload = init;
     </script>
 </body>
 </html>
