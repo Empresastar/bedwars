@@ -3,7 +3,6 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 
 export class Player {
     constructor(camera, domElement) {
-        this.camera = camera;
         this.controls = new PointerLockControls(camera, domElement);
         this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
@@ -11,40 +10,28 @@ export class Player {
         this.moveBackward = false;
         this.moveLeft = false;
         this.moveRight = false;
-        this.canJump = false;
 
-        document.addEventListener('keydown', (e) => this.onKeyDown(e));
-        document.addEventListener('keyup', (e) => this.onKeyUp(e));
-        
-        domElement.addEventListener('click', () => {
-            this.controls.lock();
-        });
+        document.addEventListener('keydown', (e) => this.onKey(e, true));
+        document.addEventListener('keyup', (e) => this.onKey(e, false));
+        document.addEventListener('click', () => this.controls.lock());
     }
 
-    onKeyDown(event) {
+    onKey(event, isDown) {
         switch (event.code) {
-            case 'KeyW': this.moveForward = true; break;
-            case 'KeyA': this.moveLeft = true; break;
-            case 'KeyS': this.moveBackward = true; break;
-            case 'KeyD': this.moveRight = true; break;
-            case 'Space': if (this.canJump) this.velocity.y += 15; this.canJump = false; break;
-        }
-    }
-
-    onKeyUp(event) {
-        switch (event.code) {
-            case 'KeyW': this.moveForward = false; break;
-            case 'KeyA': this.moveLeft = false; break;
-            case 'KeyS': this.moveBackward = false; break;
-            case 'KeyD': this.moveRight = false; break;
+            case 'KeyW': this.moveForward = isDown; break;
+            case 'KeyS': this.moveBackward = isDown; break;
+            case 'KeyA': this.moveLeft = isDown; break;
+            case 'KeyD': this.moveRight = isDown; break;
+            case 'Space': if (isDown && Math.abs(this.velocity.y) < 0.1) this.velocity.y += 10; break;
         }
     }
 
     update(delta) {
         if (!this.controls.isLocked) return;
 
-        this.velocity.x -= this.velocity.x * 10.0 * delta;
-        this.velocity.z -= this.velocity.z * 10.0 * delta;
+        const friction = 10.0;
+        this.velocity.x -= this.velocity.x * friction * delta;
+        this.velocity.z -= this.velocity.z * friction * delta;
         this.velocity.y -= 30.0 * delta; // Gravidade
 
         this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
@@ -61,7 +48,6 @@ export class Player {
         if (this.controls.getObject().position.y < 2) {
             this.velocity.y = 0;
             this.controls.getObject().position.y = 2;
-            this.canJump = true;
         }
     }
 }
