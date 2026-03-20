@@ -28,11 +28,9 @@ export class Player {
 
     update(delta) {
         if (!this.controls.isLocked) return;
-
-        const friction = 10.0;
-        this.velocity.x -= this.velocity.x * friction * delta;
-        this.velocity.z -= this.velocity.z * friction * delta;
-        this.velocity.y -= 30.0 * delta; // Gravidade
+        this.velocity.x -= this.velocity.x * 10.0 * delta;
+        this.velocity.z -= this.velocity.z * 10.0 * delta;
+        this.velocity.y -= 30.0 * delta; 
 
         this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
         this.direction.x = Number(this.moveRight) - Number(this.moveLeft);
