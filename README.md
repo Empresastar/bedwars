@@ -2,4 +2,4 @@
 
 
 ## 🕹️ Como rodar:
-Ative o **GitHub Pages** nas configurações para gerar o link.
+so aprta no git hub peges e jogar
