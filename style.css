@@ -1,0 +1,48 @@
+body { 
+    margin: 0; 
+    overflow: hidden; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+}
+
+#crosshair {
+    position: fixed; 
+    top: 50%; 
+    left: 50%;
+    width: 20px; 
+    height: 20px; 
+    margin: -10px;
+    z-index: 10; 
+    pointer-events: none;
+}
+
+#crosshair::before, #crosshair::after { 
+    content: ""; 
+    position: absolute; 
+    background: white; 
+}
+
+#crosshair::before { 
+    left: 9px; 
+    top: 0; 
+    width: 2px; 
+    height: 20px; 
+}
+
+#crosshair::after { 
+    top: 9px; 
+    left: 0; 
+    width: 20px; 
+    height: 2px; 
+}
+
+#hud {
+    position: fixed; 
+    bottom: 20px; 
+    left: 20px;
+    color: white; 
+    background: rgba(0,0,0,0.7);
+    padding: 15px; 
+    border-radius: 10px;
+    border: 2px solid #555;
+    user-select: none;
+}
