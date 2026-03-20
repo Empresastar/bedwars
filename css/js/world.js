@@ -6,7 +6,6 @@ export class World {
         this.scene = scene;
         this.geometry = new THREE.BoxGeometry(1, 1, 1);
     }
-
     generate(size = 10) {
         for (let x = -size; x < size; x++) {
             for (let z = -size; z < size; z++) {
